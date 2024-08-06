@@ -1,10 +1,9 @@
 'use strict';
 
-const { get } = require('got');
-
 const async = require('./async');
 
-const key = require('./key.json').key;
+const API_KEY = 'AQVN3inFAohwk9SfyOdT53ma_5rQo2K0fl3HF_dh';
+const folderId = 'b1gi7eo3n939krujvjvn';
 
 /**
  * Возвращает функцию, которая возвращает промис
@@ -13,10 +12,27 @@ const key = require('./key.json').key;
  * @returns {Function<Promise>}
  */
 function createTranslationJob(lang, text) {
-    return () => get('https://translate.yandex.net/api/v1.5/tr.json/translate', {
-        query: { key, lang, text },
-        json: true
+    const body = {
+        targetLanguageCode: lang,
+        texts: text,
+        folderId: folderId,
+    };
+    const headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Api-Key ${API_KEY}`,
+    };
+    
+    return fetch('https://translate.api.cloud.yandex.net/translate/v2/translate', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+    })
+    .then(response => response.json())
+    .then(result => result.translations[0].text)
+    .catch(error => {
+        console.error('Error:', error);
     });
+
 }
 
 const languages = ['be', 'uk', 'en', 'fr', 'de', 'it', 'pl', 'tr', 'th', 'ja'];
@@ -26,9 +42,7 @@ const jobs = languages.map(language => createTranslationJob(language, text));
 
 async
     .runParallel(jobs, 2)
-    .then(result => result.map(item => item instanceof Error ? item : item.body.text[0]))
-    .then(translations => translations.join('\n'))
-    .then(console.info);
+    .then(result => console.log(result.flat()));
 
 /*
     дайце мне вады
